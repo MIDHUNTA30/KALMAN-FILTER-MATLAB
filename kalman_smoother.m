@@ -1,71 +1,61 @@
 % MATLAB program for implementing kalman smoother
-function main
 clear all;
 close all;
-global A B
 % initialize system and simulation parameters
-N=25;
-Qf=[1 0;0 1];
-Q=[1 0;0 1]; J0=0;
-R=1;s=1; n=2;I=eye(2);
-x0 = [10+2.5*randn(1);5+2.5*randn(1)]; xk0=[10;5];
 A=[0.5 0;-1 1.5];
 B=[0.5;0.1];
 C=[1 0.5];
+N=25;n=2;m=1;p=1;I=eye(n); 
+Q=[1 0;0 1];R=1;
+K=[2.735 -2.747];
+
 
 % Initializing the vectors and matrices
-xp = zeros(2,N);
-xk = zeros(2,N+1);
-xN = zeros(2,N+1);
-xk(:,1)=xk0;
-P=[1 0;0 1];
-Pp=zeros(2,2*(N)); 
-Pk=zeros(2,2*(N+1));
-PN=zeros(2,2*(N+1));
-Pk(:,1:2)=P;
-P0=zeros(2,N+1);
-L0=zeros(2,N);
-Lk=zeros(2,N);
-Lsk=zeros(2,N);  
-
-x = zeros(2,N+1);
+x0 = [10+2.5*randn(1);5+2.5*randn(1)]; x0a=[10;5];
+x = zeros(n,N+1);  % x stores the sequence of actual states xk
 x(:,1)=x0;
-u = zeros(1,N);
-y = zeros(1,N);
+u = zeros(m,N);
+y = zeros(p,N);
+xp = zeros(n,N);   % xp stores the sequence of predicted states xk|k-1
+xf = zeros(n,N+1);   % xf stores the sequence of filtered states xk|k
+xf(:,1)=x0a;
+xs = zeros(n,N+1);   % xs stores the sequence of smoothed states xk|N
+Pp=zeros(n,n*(N));  % Pp stores the sequence of matrices Pk|k-1
+Pf=zeros(n,n*(N+1));  % Pf stores the sequence of matrices Pk|k
+Pf(:,1:n)=Q;
+Ps=zeros(n,n*(N+1));  % Ps stores the sequence of matrices Pk|N
+Psd=zeros(n,N+1);  % Psd stores the diagonal elements of Pk|N
+L=zeros(n,N);  % L stores the sequence of gains Lk
+Ls=zeros(n,n*N);  % Ls stores the sequence of gains Lsk
+Lsd=zeros(n,N);  % Lsd stores the diagonal elements of Lsk
+
+
     
 % Kalman smoother algorithm stage 1: Filtering
 for j=2:N+1   
-    d(:,j-1)=0.25*randn(2,1);
-    v(j-1)=0.25*randn(1);
-    
-    %K=K0(j,:)
-    K=[2.735 -2.747];
+    d(:,j-1)=0.25*randn(n,1);
+    v(j-1)=0.25*randn(p);
     u(j-1)=-K*x(:,j-1);
     x(:,j)=A*x(:,j-1)+B*u(1,j-1)+d(:,j-1);
     y(j-1)=C*x(:,j-1)+v(j-1);
-      
-    xp(:,j-1)=A*xk(:,j-1)+B*u(1,j-1);
-    Pp(:,2*(j-1)-1:2*(j-1))=A*Pk(:,2*(j-1)-1:2*(j-1))*A'+Q;
-
-    Lk(:,j-1)=Pp(:,2*(j-1)-1:2*(j-1))*C'*(C*Pp(:,2*(j-1)-1:2*(j-1))*C'+R)^-1;   
-    xk(:,j)= xp(:,j-1)+Lk(:,j-1)*(y(j-1)-C*xp(:,j-1));
-    Pk(:,2*j-1:2*j)=(I-Lk(:,j-1)*C)*Pp(:,2*(j-1)-1:2*(j-1))*(I-Lk(:,j-1)*C)'+Lk(:,j-1)*R*Lk(:,j-1)';
+    xp(:,j-1)=A*xf(:,j-1)+B*u(1,j-1);
+    Pp(:,n*(j-2)+1:n*(j-1))=A*Pf(:,n*(j-2)+1:n*(j-1))*A'+Q;
+    L(:,j-1)=Pp(:,n*(j-2)+1:n*(j-1))*C'*(C*Pp(:,n*(j-2)+1:n*(j-1))*C'+R)^-1;   
+    xf(:,j)= xp(:,j-1)+L(:,j-1)*(y(j-1)-C*xp(:,j-1));
+    Pf(:,n*(j-1)+1:n*j)=(I-L(:,j-1)*C)*Pp(:,n*(j-2)+1:n*(j-1))*(I-L(:,j-1)*C)'+L(:,j-1)*R*L(:,j-1)';
 end      
     
-   xN(:,N+1)=xk(:,N+1);
-   PN(:,2*(N+1)-1:2*(N+1))=Pk(:,2*(N+1)-1:2*(N+1));
-   P0(1,N+1)=PN(1,2*(N+1)-1);
-   P0(2,N+1)=PN(2,2*(N+1)); 
+   xs(:,N+1)=xf(:,N+1);
+   Ps(:,n*N+1:n*(N+1))=Pf(:,n*N+1:n*(N+1));
+   Psd(:,N+1)=diag(Ps(:,n*N+1:n*(N+1)));
 
 % Kalman smoother algorithm stage 2: Smoothing   
 for k=N:-1:1
-    LN(:,2*k-1:2*k)= Pk(:,2*k-1:2*k)*A'*(A*Pk(:,2*k-1:2*k)*A'+Q)^-1;   
-    xN(:,k)=xk(:,k)+LN(:,2*k-1:2*k)*(xN(:,k+1)-xp(:,k));    
-    PN(:,2*k-1:2*k)=Pk(:,2*k-1:2*k)+LN(:,2*k-1:2*k)*(PN(:,2*(k+1)-1:2*(k+1))-Pp(:,2*k-1:2*k))*LN(:,2*k-1:2*k)';
-    P0(1,k)=PN(1,2*k-1);
-    P0(2,k)=PN(2,2*k); 
-    L0(1,k)=LN(1,2*k-1);
-    L0(2,k)=LN(2,2*k); 
+    Ls(:,n*(k-1)+1:n*k)= Pf(:,n*(k-1)+1:n*k)*A'*(A*Pf(:,n*(k-1)+1:n*k)*A'+Q)^-1;   
+    xs(:,k)=xf(:,k)+Ls(:,n*(k-1)+1:n*k)*(xs(:,k+1)-xp(:,k));    
+    Ps(:,n*(k-1)+1:n*k)=Pf(:,n*(k-1)+1:n*k)+Ls(:,n*(k-1)+1:n*k)*(Ps(:,n*k+1:n*(k+1))-Pp(:,n*(k-1)+1:n*k))*Ls(:,n*(k-1)+1:n*k)';
+    Psd(:,k)=diag(Ps(:,n*(k-1)+1:n*k));
+    Lsd(:,k)=diag(Ls(:,n*(k-1)+1:n*k)); 
 end    
 
 % Plotting the responces    
@@ -74,7 +64,7 @@ time = (0:N);
 subplot(3,1,1)
 plot(time,x(1,:),'k.-',time,x(2,:),'r.-','LineWidth',1) 
 hold on
-plot(time,xN(1,:),'k.-',time,xN(2,:),'r.-','LineWidth',1) 
+plot(time,xs(1,:),'k.-',time,xs(2,:),'r.-','LineWidth',1) 
 legend('$x_{1},\hat{x}_{1}$','$x_{2},\hat{x}_{2}$','Interpreter','latex');
 %axis([0 50 -10 10])
 xlabel('k','Interpreter','latex');ylabel('$\textbf{x}_{k},\hat{\textbf{x}}_{k|N}$','Interpreter','latex');
@@ -83,9 +73,7 @@ ax = gca;
 ax.GridAlpha = 1
 ax.GridLineStyle = ':'
 subplot(3,1,2)
-plot(time(1:end-1),L0(1,:),'k.-','LineWidth',1) 
-hold on
-plot(time(1:end-1),L0(2,:),'r.-','LineWidth',1) 
+plot(time(1:end-1),Lsd(1,:),'k.-',time(1:end-1),Lsd(2,:),'r.-','LineWidth',1) 
 legend('$L_{s_{11}}$','$L_{s_{22}}$','Interpreter','latex');
 %axis([0 50 -3 3])
 xlabel('k','Interpreter','latex');ylabel('$\textbf{L}_{s_{k}}$','Interpreter','latex');
@@ -94,9 +82,7 @@ ax = gca;
 ax.GridAlpha = 1
 ax.GridLineStyle = ':'
 subplot(3,1,3)
-plot(time,P0(1,:),'k.-','LineWidth',1) 
-hold on
-plot(time,P0(2,:),'r.-','LineWidth',1)
+plot(time,Psd(1,:),'k.-',time,Psd(2,:),'r.-','LineWidth',1) 
 legend('$P_{11}$','$P_{22}$','Interpreter','latex');
 %axis([0 50 -10 10])
 xlabel('k','Interpreter','latex');ylabel('$\textbf{P}_{k|N}$','Interpreter','latex');
@@ -105,5 +91,4 @@ ax = gca;
 ax.GridAlpha = 1
 ax.GridLineStyle = ':'
 print -dsvg fig3
-end
 
