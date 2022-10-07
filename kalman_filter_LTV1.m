@@ -30,7 +30,7 @@ L=zeros(n,N);  % L stores the sequence of gains Lk
 for j=2:N+1   
     d(:,j-1)=0.25*randn(n,1);
     v(:,j-1)=0.25*randn(p);
-    u(j-1)=-K*x(:,j-1);
+    u(j-1)=-K*x(:,j-1); % Here the actual state is used in the control law since the system is open-loop unstable. In other examples the estimated state can be used.
     Ak=A+((-1)^j)*0.5*eye(n);Bk=B+((-1)^j)*0.1*B;
     x(:,j)=Ak*x(:,j-1)+Bk*u(:,j-1)+d(:,j-1);
     y(:,j-1)=C*x(:,j-1)+v(:,j-1);
