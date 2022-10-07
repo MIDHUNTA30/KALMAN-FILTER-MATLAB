@@ -29,7 +29,7 @@ L=zeros(n,N);  % L stores Lk sequence
 for j=1:N   
     d(:,j)=0.25*randn(n,1);
     v(:,j)=0.25*randn(p);
-    u(:,j)=-K*x(:,j);
+    u(:,j)=-K*x(:,j);  % Here the actual state is used in the control law since the system is open-loop unstable. In other examples the estimated state can be used.
     Ak=A+((-1)^j)*0.5*eye(n);Bk=B+((-1)^j)*0.1*B;
     x(:,j+1)=Ak*x(:,j)+Bk*u(:,j)+d(:,j);
     y(:,j)=C*x(:,j)+v(:,j);
